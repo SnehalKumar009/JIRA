@@ -1,0 +1,67 @@
+# Defaults only. Every environment-specific value (database URL, credentials, telemetry endpoints)
+# comes from environment variables set by Docker Compose — see .env.example at the repository root.
+spring:
+  application:
+    name: tracker
+  datasource:
+    hikari:
+      maximum-pool-size: 10
+  flyway:
+    locations: classpath:db/migration
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+  mvc:
+    problemdetails:
+      enabled: true
+  threads:
+    virtual:
+      enabled: true
+
+server:
+  port: 8080
+  shutdown: graceful
+  # Trust X-Forwarded-* from Caddy (private network ranges only) so HTTPS is detected correctly.
+  forward-headers-strategy: native
+  error:
+    include-stacktrace: never
+    include-message: never
+
+management:
+  # Separate port that Caddy does not route: health and metrics are reachable only inside Compose.
+  server:
+    port: 8081
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: readinessState, db
+  info:
+    build:
+      enabled: true
+  observations:
+    enable:
+      # One span per security filter drowns the useful spans; the request span already covers them.
+      spring.security: false
+  tracing:
+    sampling:
+      probability: 1.0
+    # Off unless the observability profile is running (see docs/runbooks/observability.md).
+    export:
+      enabled: false
+  logging:
+    export:
+      otlp:
+        enabled: false
+
+springdoc:
+  api-docs:
+    # Deliberately public: the API is the product (FEATURES §2, API-first).
+    enabled: true
+    path: /api/v1/openapi.json
+  paths-to-match: /api/**

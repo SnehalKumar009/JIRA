@@ -1,0 +1,43 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "docker:pinDigests",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "timezone": "Asia/Kolkata",
+  "schedule": ["before 6am on monday"],
+  "labels": ["dependencies"],
+  "packageRules": [
+    {
+      "description": "Spring Boot and the libraries aligned to it move together",
+      "matchPackageNames": ["org.springframework.boot:**", "org.springframework.modulith:**", "org.springdoc:**"],
+      "groupName": "Spring Boot"
+    },
+    {
+      "description": "Java stays on 21 (ADR-0017); a new LTS is a deliberate decision, not a bot PR",
+      "matchPackageNames": ["eclipse-temurin", "maven"],
+      "allowedVersions": "/(^|-)21(\\.|-|$)/"
+    },
+    {
+      "description": "Node stays on the 22 line used for local builds",
+      "matchPackageNames": ["node"],
+      "allowedVersions": "<23"
+    },
+    {
+      "description": "A PostgreSQL major upgrade needs dump/restore; never automatic",
+      "matchPackageNames": ["postgres"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    }
+  ],
+  "customManagers": [
+    {
+      "description": "Keep the Testcontainers PostgreSQL image in step with compose.yaml",
+      "customType": "regex",
+      "managerFilePatterns": ["/^backend/src/test/java/.+\\.java$/"],
+      "matchStrings": ["DockerImageName\\.parse\\(\"(?<depName>postgres):(?<currentValue>[^\"@]+)\"\\)"],
+      "datasourceTemplate": "docker"
+    }
+  ]
+}

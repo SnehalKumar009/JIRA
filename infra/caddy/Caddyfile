@@ -1,0 +1,33 @@
+# Edge proxy: TLS from Caddy's own local CA (ADR-0012). Only bound to 127.0.0.1 on the desktop.
+# HTTPS runs on TRACKER_HTTPS_PORT (default 8443) inside the container too, so a URL such as
+# https://auth.test:8443 means the same thing to the browser and to the other containers.
+{
+	https_port {$TRACKER_HTTPS_PORT}
+	# No plain-HTTP listener: nothing is published for it, and port 80 on this desktop belongs to MicroK8s.
+	auto_https disable_redirects
+	local_certs
+	# Trust is installed on the desktop by the user (docs/runbooks/desktop-setup.md), not in the container.
+	skip_install_trust
+	servers {
+		protocols h1 h2
+	}
+}
+
+(common) {
+	encode zstd gzip
+	header -Server
+	log {
+		output stdout
+		format json
+	}
+}
+
+tracker.test {
+	import common
+	reverse_proxy app:8080
+}
+
+auth.test {
+	import common
+	reverse_proxy keycloak:8080
+}
