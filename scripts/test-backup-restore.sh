@@ -11,7 +11,8 @@ backup_dir="$("$REPO_ROOT/scripts/backup.sh")"
 
 log "Wiping the database volume"
 compose down
-docker volume rm tracker_postgres-data > /dev/null
+# Project name follows Compose's own precedence: COMPOSE_PROJECT_NAME, else `name:` in compose.yaml.
+docker volume rm "${COMPOSE_PROJECT_NAME:-tracker}_postgres-data" > /dev/null
 compose up -d --wait
 fresh="$(installation_id)"
 [[ "$fresh" != "$original" ]] || fail "volume was not actually wiped"

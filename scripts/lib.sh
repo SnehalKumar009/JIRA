@@ -4,7 +4,8 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CA_CERT="$REPO_ROOT/certs/tracker-local-ca.crt"
-HTTPS_PORT="$(grep -E '^TRACKER_HTTPS_PORT=' "$REPO_ROOT/.env" 2>/dev/null | cut -d= -f2)"
+# .env may not exist yet (init-env.sh sources this file to create it), so a failed grep is fine here.
+HTTPS_PORT="$(grep -E '^TRACKER_HTTPS_PORT=' "$REPO_ROOT/.env" 2>/dev/null | cut -d= -f2 || true)"
 HTTPS_PORT="${HTTPS_PORT:-8443}"
 TRACKER_URL="https://tracker.test:$HTTPS_PORT"
 AUTH_URL="https://auth.test:$HTTPS_PORT"
