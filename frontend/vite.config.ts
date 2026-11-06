@@ -14,5 +14,7 @@ export default defineConfig({
   build: {
     outDir: "dist",
     sourcemap: false,
+    // React + Mantine are most of the bundle (~170 kB gzipped). Code-split once pages multiply.
+    chunkSizeWarningLimit: 700,
   },
 });

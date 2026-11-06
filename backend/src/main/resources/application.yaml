@@ -13,6 +13,12 @@ spring:
   mvc:
     problemdetails:
       enabled: true
+  session:
+    timeout: 30m
+    jdbc:
+      # Table comes from Flyway (V2), not from Spring Session.
+      initialize-schema: never
+      cleanup-cron: "0 * * * * *"
   threads:
     virtual:
       enabled: true
@@ -22,6 +28,20 @@ server:
   shutdown: graceful
   # Trust X-Forwarded-* from Caddy (private network ranges only) so HTTPS is detected correctly.
   forward-headers-strategy: native
+  tomcat:
+    remoteip:
+      # Caddy sends the public port (8443), needed to build correct OIDC redirect URIs.
+      port-header: X-Forwarded-Port
+  servlet:
+    session:
+      timeout: 30m
+      cookie:
+        # __Host- prefix: browser enforces Secure, Path=/ and no Domain — the cookie can't leak to
+        # other hosts or be set over plain HTTP (ADR-0002).
+        name: __Host-tracker-session
+        secure: true
+        http-only: true
+        same-site: lax
   error:
     include-stacktrace: never
     include-message: never
@@ -65,3 +85,12 @@ springdoc:
     enabled: true
     path: /api/v1/openapi.json
   paths-to-match: /api/**
+
+tracker:
+  oidc:
+    # issuer, backchannel-url and client-secret come from the environment (compose.yaml).
+    client-id: tracker-app
+    admin-group: tracker-admins
+  rate-limit:
+    authenticated-per-minute: 600
+    anonymous-per-minute: 120

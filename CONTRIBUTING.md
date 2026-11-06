@@ -8,7 +8,10 @@
   `dev.tracker` is a module. Use another module only through its top-level package; never its
   sub-packages. `ModularityTests` enforces this.
 - **Schema changes** are new Flyway migrations (`backend/src/main/resources/db/migration`), never
-  edits to applied ones. Keep them forward-compatible (expand → migrate → contract).
+  edits to applied ones. Keep them forward-compatible (expand → migrate → contract). Then run
+  `scripts/generate-jooq.sh` and commit the regenerated `backend/src/main/jooq` (ADR-0022).
+- **Tables belong to modules.** Only the owning module touches a table; add new tables to
+  `TableOwnershipTests`.
 - **Significant decisions** get an ADR in [`docs/adr/`](docs/adr/README.md). To change an accepted
   decision, add a new ADR that amends or supersedes it.
 - **No secrets in git.** Configuration comes from the environment; local secrets live in `.env`.
@@ -18,11 +21,12 @@
 | Task | Command |
 |---|---|
 | Backend tests (needs Docker) | `cd backend && ./mvnw verify` |
-| Backend against a throwaway database | `cd backend && ./mvnw spring-boot:test-run` |
+| Backend against a throwaway database (no sign-in) | `cd backend && ./mvnw spring-boot:test-run` |
 | Frontend dev server (proxies `/api` to :8080) | `cd frontend && npm ci && npm run dev` |
 | Frontend typecheck and build | `cd frontend && npm run build` |
 | Full stack | `docker compose up -d --wait` |
-| Full-stack checks | `scripts/smoke-test.sh`, `scripts/test-persistence.sh`, `scripts/measure-memory.sh` |
+| Regenerate jOOQ classes after a migration | `scripts/generate-jooq.sh` |
+| Full-stack checks | `scripts/smoke-test.sh`, `scripts/test-login.sh`, `scripts/test-persistence.sh`, `scripts/measure-memory.sh` |
 
 ## CI
 

@@ -26,9 +26,14 @@ jobs:
           distribution: temurin
           java-version: "21"
           cache: maven
-      # Unit, integration (Testcontainers: real PostgreSQL) and module-boundary tests.
+      # Unit, integration (Testcontainers: real PostgreSQL and Keycloak) and module-boundary tests.
       - run: ./mvnw -B verify
         working-directory: backend
+      # The committed jOOQ classes must match the migrations (ADR-0022).
+      - name: Generated jOOQ code is up to date
+        run: |
+          scripts/generate-jooq.sh
+          git diff --exit-code -- backend/src/main/jooq
 
   frontend:
     name: Frontend typecheck and build
@@ -88,6 +93,9 @@ jobs:
         run: docker compose up -d --wait
       - name: Smoke test (TLS, headers, SPA, Keycloak issuer)
         run: scripts/smoke-test.sh
+      # Sign-in, access tokens, back-channel logout, Keycloak disable (up to ~5 min), audit trail.
+      - name: Identity (M1 exit criteria)
+        run: scripts/test-login.sh
       - name: Data survives down / up
         run: scripts/test-persistence.sh
       - name: Backup -> wipe -> restore

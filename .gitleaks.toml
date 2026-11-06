@@ -1,0 +1,9 @@
+# Secret scanning (ADR-0015): gitleaks' default rules plus our own token format.
+[extend]
+useDefault = true
+
+[[rules]]
+id = "tracker-personal-access-token"
+description = "Tracker personal access token"
+regex = '''trk_pat_[A-Za-z0-9_-]{43}'''
+keywords = ["trk_pat_"]

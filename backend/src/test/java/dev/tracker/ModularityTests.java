@@ -1,5 +1,6 @@
 package dev.tracker;
 
+import com.tngtech.archunit.core.domain.JavaClass;
 import org.junit.jupiter.api.Test;
 import org.springframework.modulith.core.ApplicationModules;
 
@@ -8,6 +9,8 @@ class ModularityTests {
 
     @Test
     void moduleBoundariesAreRespected() {
-        ApplicationModules.of(TrackerApplication.class).verify();
+        // Generated jOOQ classes are shared plumbing, not a module; table ownership is checked separately.
+        ApplicationModules.of(TrackerApplication.class, JavaClass.Predicates.resideInAPackage("dev.tracker.jooq.."))
+                .verify();
     }
 }

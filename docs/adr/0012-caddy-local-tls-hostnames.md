@@ -1,6 +1,6 @@
 # ADR-0012: Caddy with a local CA and `.test` hostnames
 
-- **Status:** Accepted — port amended by [ADR-0019](0019-configurable-https-port.md)
+- **Status:** Accepted — port amended by [ADR-0019](0019-configurable-https-port.md); the app's own calls to Keycloak by [ADR-0020](0020-oidc-backchannel-urls.md)
 - **Date:** 2026-10-28
 
 ## Context

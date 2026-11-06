@@ -1,52 +1,47 @@
-import { useEffect, useState } from "react";
+import { Alert, AppShell, Center, Loader } from "@mantine/core";
+import { Navigate, Route, Routes } from "react-router";
+import { useMe } from "./auth";
+import { Header } from "./Header";
+import { HomePage } from "./pages/HomePage";
+import { SignInPage } from "./pages/SignInPage";
+import { TokensPage } from "./pages/TokensPage";
 
-type SystemInfo = {
-  name: string;
-  version: string;
-  installationId: string;
-};
-
-type State =
-  | { kind: "loading" }
-  | { kind: "ready"; info: SystemInfo }
-  | { kind: "error"; message: string };
-
-// M0 placeholder: proves the build path and same-origin API access. The real app shell arrives in M1.
 export function App() {
-  const [state, setState] = useState<State>({ kind: "loading" });
+  const me = useMe();
 
-  useEffect(() => {
-    const controller = new AbortController();
-    fetch("/api/v1/system/info", { signal: controller.signal })
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(`API returned ${response.status}`);
-        }
-        setState({ kind: "ready", info: (await response.json()) as SystemInfo });
-      })
-      .catch((error: unknown) => {
-        if (!controller.signal.aborted) {
-          setState({ kind: "error", message: error instanceof Error ? error.message : String(error) });
-        }
-      });
-    return () => controller.abort();
-  }, []);
+  if (me.isPending) {
+    return (
+      <Center h="100vh">
+        <Loader />
+      </Center>
+    );
+  }
+  if (me.isError) {
+    return (
+      <Center h="100vh" p="md">
+        <Alert color="red" title="Tracker is unavailable">
+          {me.error.message}
+        </Alert>
+      </Center>
+    );
+  }
+  if (me.data === null) {
+    return <SignInPage />;
+  }
 
+  // Routes here must also be listed in the backend's SpaController.
   return (
-    <main className="status">
-      <h1>Tracker</h1>
-      {state.kind === "loading" && <p>Checking the platform…</p>}
-      {state.kind === "error" && <p className="error">Platform check failed: {state.message}</p>}
-      {state.kind === "ready" && (
-        <dl>
-          <dt>Version</dt>
-          <dd>{state.info.version}</dd>
-          <dt>Installation</dt>
-          <dd>
-            <code>{state.info.installationId}</code>
-          </dd>
-        </dl>
-      )}
-    </main>
+    <AppShell header={{ height: 56 }} padding="md">
+      <AppShell.Header>
+        <Header me={me.data} />
+      </AppShell.Header>
+      <AppShell.Main>
+        <Routes>
+          <Route path="/" element={<HomePage me={me.data} />} />
+          <Route path="/settings/tokens" element={<TokensPage me={me.data} />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </AppShell.Main>
+    </AppShell>
   );
 }

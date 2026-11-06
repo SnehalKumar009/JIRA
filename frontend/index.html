@@ -3,6 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- The server fills in a per-request nonce; the UI library uses it for its <style> elements (ADR-0021). -->
+    <meta name="csp-nonce" content="__CSP_NONCE__" />
     <title>Tracker</title>
   </head>
   <body>

@@ -73,13 +73,15 @@ Import → `certs/tracker-local-ca.crt` → tick "Trust this CA to identify webs
 The CA is stored in the `caddy-data` volume and lasts 10 years. It only changes if that volume is
 deleted — then repeat this step.
 
-## 6. Check
+## 6. Create your user
 
-Open <https://tracker.test:8443>. You should see the Tracker status page with a version and
-installation ID, and no certificate warning.
+Follow [users-and-access.md](users-and-access.md): add yourself in the Keycloak console and join
+`tracker-admins`. At first sign-in you'll set a password and enrol an authenticator app.
 
-Keycloak's admin console is at <https://auth.test:8443/admin/> (bootstrap admin credentials are in
-`.env`; from M1 the realm is configured as code).
+## 7. Check
+
+Open <https://tracker.test:8443> → **Sign in**. After signing in you should see the Tracker home
+page with your name and groups, and no certificate warning.
 
 ## Why port 8443, not 443
 

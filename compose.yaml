@@ -97,6 +97,35 @@ services:
     restart: on-failure:5
     logging: *logging
 
+  # One-shot: applies infra/keycloak/realm/*.json to Keycloak on every start, idempotently
+  # (ADR-0023). Users created in Keycloak are left alone; realm settings and the client follow the file.
+  keycloak-config:
+    image: adorsys/keycloak-config-cli:6.5.1-26.5.5@sha256:0955d98c8a341898b7aa177477edf8a1e90569ae50bbe7598141c1270b773274
+    <<: *hardening
+    cap_drop: [ALL]
+    environment:
+      KEYCLOAK_URL: http://keycloak:8080
+      KEYCLOAK_USER: ${KEYCLOAK_ADMIN_USERNAME:?run scripts/init-env.sh}
+      KEYCLOAK_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?run scripts/init-env.sh}
+      KEYCLOAK_AVAILABILITYCHECK_ENABLED: "true"
+      KEYCLOAK_AVAILABILITYCHECK_TIMEOUT: 120s
+      IMPORT_FILES_LOCATIONS: /config/*.json
+      IMPORT_VARSUBSTITUTION_ENABLED: "true"
+      # Always apply: the checksum cache would skip changes that come only from environment values.
+      IMPORT_CACHE_ENABLED: "false"
+      TRACKER_OIDC_CLIENT_SECRET: ${TRACKER_OIDC_CLIENT_SECRET:?run scripts/init-env.sh}
+      TRACKER_PUBLIC_URL: https://tracker.test:${TRACKER_HTTPS_PORT:-8443}
+      TRACKER_BACKCHANNEL_LOGOUT_URL: http://app:8080/logout/connect/back-channel/keycloak
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=70
+    volumes:
+      - ./infra/keycloak/realm:/config:ro
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    mem_limit: 384m
+    restart: "no"
+    logging: *logging
+
   app:
     build: .
     image: tracker-app:${TRACKER_IMAGE_TAG:-local}
@@ -109,11 +138,17 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/tracker
       SPRING_DATASOURCE_USERNAME: tracker
       SPRING_DATASOURCE_PASSWORD: ${TRACKER_DB_PASSWORD:?run scripts/init-env.sh}
+      # Public issuer for the browser and token checks; internal URL for the app's own calls (ADR-0020).
+      TRACKER_OIDC_ISSUER: https://auth.test:${TRACKER_HTTPS_PORT:-8443}/realms/tracker
+      TRACKER_OIDC_BACKCHANNEL_URL: http://keycloak:8080/realms/tracker
+      TRACKER_OIDC_CLIENT_SECRET: ${TRACKER_OIDC_CLIENT_SECRET:?run scripts/init-env.sh}
       MANAGEMENT_TRACING_EXPORT_ENABLED: ${TRACING_EXPORT_ENABLED:-false}
       MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
     depends_on:
       postgres:
         condition: service_healthy
+      keycloak-config:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:8081/actuator/health/readiness"]
       interval: 10s

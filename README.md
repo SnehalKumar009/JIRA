@@ -4,8 +4,8 @@ A Jira-style issue tracker, built as a **production-grade POC**: narrow scope, f
 quality. The goal is to reverse-engineer how Jira works — especially its configuration engine
 (workflows, schemes, fields, JQL) — under its own name.
 
-**Current milestone:** M0 Foundations — the platform runs, stops, starts and recovers; no product
-features yet. See [MILESTONES.md](MILESTONES.md).
+**Current milestone:** M1 Identity — sign-in through Keycloak (OIDC, MFA), users and groups,
+personal access tokens, audit log. See [MILESTONES.md](MILESTONES.md).
 
 ## Quick start
 
@@ -17,13 +17,14 @@ docker compose up -d --wait  # build and start the stack
 scripts/smoke-test.sh        # verify it end to end
 ```
 
-Then open <https://tracker.test:8443>.
+Then create your user ([docs/runbooks/users-and-access.md](docs/runbooks/users-and-access.md)) and
+open <https://tracker.test:8443>.
 
 | URL | What |
 |---|---|
 | https://tracker.test:8443 | App (SPA + REST API under `/api/v1`) |
 | https://tracker.test:8443/api/v1/openapi.json | OpenAPI spec |
-| https://auth.test:8443/admin/ | Keycloak admin console |
+| https://auth.test:8443/admin/master/console/#/tracker | Keycloak admin console (realm `tracker`) |
 
 ## Documentation
 
@@ -34,10 +35,10 @@ Then open <https://tracker.test:8443>.
 | [MILESTONES.md](MILESTONES.md) | P0 milestones and exit criteria |
 | [TECH_STACK.md](TECH_STACK.md) | Architecture, stack, memory budget |
 | [docs/adr/](docs/adr/README.md) | Architecture decision records |
-| [docs/runbooks/](docs/runbooks/) | Desktop setup, operations, observability |
+| [docs/runbooks/](docs/runbooks/) | Desktop setup, users and access, operations, observability |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Ground rules and local development |
 
 ## Stack at a glance
 
-Java 21 + Spring Boot 4.1 modular monolith · PostgreSQL 18 · Keycloak 26 (OIDC) · React 19 + Vite
-SPA · Caddy (local TLS) · Docker Compose, whole stack under 3 GB RAM.
+Java 21 + Spring Boot 4.1 modular monolith · jOOQ · PostgreSQL 18 · Keycloak 26 (OIDC, realm as
+code) · React 19 + Mantine SPA · Caddy (local TLS) · Docker Compose, whole stack under 3 GB RAM.

@@ -1,9 +1,9 @@
 package dev.tracker.platform.web;
 
+import dev.tracker.platform.RequestId;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.MDC;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -35,7 +35,7 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     protected ResponseEntity<Object> createResponseEntity(
             @Nullable Object body, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
         if (body instanceof ProblemDetail problem) {
-            String requestId = MDC.get(RequestIdFilter.MDC_KEY);
+            String requestId = RequestId.current();
             if (requestId != null) {
                 problem.setProperty("requestId", requestId);
             }

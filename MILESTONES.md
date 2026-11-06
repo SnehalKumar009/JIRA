@@ -44,7 +44,7 @@ Sizes are relative to each other, not time estimates.
 
 ### M0 — Foundations (walking skeleton)
 
-**Status:** Built 2026-10-28 — all exit criteria verified locally; the CI criterion is pending the first push to GitHub.
+**Status:** Done — all exit criteria met; CI green on GitHub since commit 8b5dbf0 (2026-11-03).
 
 **Goal:** the whole platform runs, stops, starts, and recovers — before any features exist.
 
@@ -71,6 +71,8 @@ Sizes are relative to each other, not time estimates.
 ---
 
 ### M1 — Identity
+
+**Status:** Built 2026-11-06 — exit criteria verified against the stack (`scripts/test-login.sh`) and in integration tests with a real Keycloak. One finding: Keycloak sends no back-channel logout when a user is *disabled*, so that case ends the app session at the next token refresh (≤ 5 minutes) rather than instantly; signing out the user's sessions in Keycloak is instant (ADR-0025).
 
 **Goal:** real users can log in securely; machines can call the API.
 

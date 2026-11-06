@@ -1,0 +1,15 @@
+# Test profile (activated for every test by surefire).
+tracker:
+  oidc:
+    # Placeholders for tests that never sign in; KeycloakIntegrationTest overrides them.
+    issuer: http://keycloak.invalid/realms/tracker
+    backchannel-url: http://keycloak.invalid/realms/tracker
+    client-secret: test-secret
+
+server:
+  servlet:
+    session:
+      cookie:
+        # Tests talk plain HTTP to localhost: no Secure cookie, so no __Host- prefix either.
+        name: tracker-session
+        secure: false

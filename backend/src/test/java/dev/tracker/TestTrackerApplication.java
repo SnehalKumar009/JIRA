@@ -9,6 +9,10 @@ import org.springframework.boot.SpringApplication;
 public class TestTrackerApplication {
 
     public static void main(String[] args) {
-        SpringApplication.from(TrackerApplication::main).with(TestcontainersConfiguration.class).run(args);
+        // The test profile supplies placeholder OIDC settings; sign-in needs the full stack.
+        SpringApplication.from(TrackerApplication::main)
+                .with(TestcontainersConfiguration.class)
+                .withAdditionalProfiles("test")
+                .run(args);
     }
 }

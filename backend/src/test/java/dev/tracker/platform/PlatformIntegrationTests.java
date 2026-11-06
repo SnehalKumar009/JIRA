@@ -78,12 +78,21 @@ class PlatformIntegrationTests {
     }
 
     @Test
-    void unknownApiPathReturnsProblemDetailWithRequestId() throws Exception {
+    void unauthenticatedApiCallReturnsProblemDetailWithRequestId() throws Exception {
         HttpResponse<String> response = get(port, "/api/v1/does-not-exist", "trace-me");
 
-        assertThat(response.statusCode()).isEqualTo(404);
+        assertThat(response.statusCode()).isEqualTo(401);
         assertThat(response.headers().firstValue("Content-Type")).hasValue("application/problem+json");
-        assertThat(response.body()).contains("\"status\":404", "\"requestId\":\"trace-me\"");
+        assertThat(response.body()).contains("\"status\":401", "\"requestId\":\"trace-me\"");
+    }
+
+    @Test
+    void cspCarriesAFreshStyleNonceOnEveryResponse() throws Exception {
+        String first = get(port, "/api/v1/system/info", null).headers().firstValue("Content-Security-Policy").orElseThrow();
+        String second = get(port, "/api/v1/system/info", null).headers().firstValue("Content-Security-Policy").orElseThrow();
+
+        assertThat(first).containsPattern("style-src 'self' 'nonce-[A-Za-z0-9+/=]{24}'").contains("script-src 'self'");
+        assertThat(first).isNotEqualTo(second);
     }
 
     @Test

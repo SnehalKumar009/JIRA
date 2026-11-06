@@ -28,11 +28,14 @@ RUN groupadd --system --gid 10001 tracker \
 WORKDIR /app
 COPY --from=backend /app ./
 # Class Data Sharing archive from a training run that stops once the context is refreshed — faster
-# startup and lower memory (ADR-0016). No database exists here: Flyway is off and the placeholder URL
-# is never connected to, because the connection pool only connects on first use.
+# startup and lower memory (ADR-0016). No database or Keycloak exists here: Flyway is off, and the
+# placeholder URLs are never contacted — the pool connects on first use, OIDC endpoints on first login.
 RUN java -XX:ArchiveClassesAtExit=tracker.jsa -Xlog:cds=off -Xlog:cds+dynamic=off \
         -Dspring.context.exit=onRefresh -Dspring.flyway.enabled=false \
-        -Dspring.datasource.url=jdbc:postgresql://127.0.0.1:5432/cds-training -jar tracker.jar \
+        -Dspring.datasource.url=jdbc:postgresql://127.0.0.1:5432/cds-training \
+        -Dtracker.oidc.issuer=https://cds-training.invalid/realms/tracker \
+        -Dtracker.oidc.backchannel-url=http://cds-training.invalid/realms/tracker \
+        -Dtracker.oidc.client-secret=cds-training -jar tracker.jar \
  && chown -R root:root /app && chmod -R a+rX /app
 USER tracker
 EXPOSE 8080 8081

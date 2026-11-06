@@ -44,22 +44,23 @@ The worker is a separate module with its own thread pool, switched on by configu
 
 | Layer | Choice | ADR |
 |---|---|---|
-| Identity provider | Keycloak (production mode, Postgres-backed), OIDC Authorization Code + PKCE, BFF sessions | [0002](docs/adr/0002-keycloak-oidc-bff.md) |
+| Identity provider | Keycloak (production mode, Postgres-backed), OIDC Authorization Code + PKCE, BFF sessions; realm as code via keycloak-config-cli; app's own calls go to Keycloak internally | [0002](docs/adr/0002-keycloak-oidc-bff.md), [0020](docs/adr/0020-oidc-backchannel-urls.md), [0023](docs/adr/0023-keycloak-config-cli.md), [0025](docs/adr/0025-session-lifecycle.md) |
 | Backend | **Java 21 (LTS) + Spring Boot 4.1**, built with Maven | [0003](docs/adr/0003-java-spring-boot.md), [0017](docs/adr/0017-java-21.md), [0018](docs/adr/0018-maven-and-repository-layout.md) |
 | Database | **PostgreSQL** — one instance, separate databases and users for app and Keycloak | [0004](docs/adr/0004-postgresql-single-datastore.md) |
-| Migrations / data access | **Flyway** + **jOOQ** (code generated from the migrated schema) | [0005](docs/adr/0005-flyway-jooq.md) |
+| Migrations / data access | **Flyway** + **jOOQ** (code generated from the migrated schema, committed) | [0005](docs/adr/0005-flyway-jooq.md), [0022](docs/adr/0022-jooq-generated-code-committed.md) |
 | Custom-field storage | Typed value table (one row per issue per field, typed columns) | [0006](docs/adr/0006-custom-field-typed-value-table.md) |
 | Async work | Transactional outbox in Postgres, polled with `FOR UPDATE SKIP LOCKED` — no message broker | [0007](docs/adr/0007-postgres-transactional-outbox.md) |
 | Sessions / caching | Server-side sessions in Postgres (Spring Session JDBC); in-process caches — no Redis | [0008](docs/adr/0008-sessions-and-caching-without-redis.md) |
 | JQL | ANTLR4 grammar → AST → jOOQ conditions | [0009](docs/adr/0009-jql-parser-antlr.md) |
-| Frontend | React + TypeScript + Vite SPA, same origin as the API; TanStack Query, React Router, dnd-kit, generated OpenAPI client | [0010](docs/adr/0010-react-vite-spa-same-origin.md) |
+| Frontend | React + TypeScript + Vite SPA, same origin as the API; **Mantine** components, TanStack Query, React Router; nonce-based style CSP (dnd-kit and a generated OpenAPI client to come) | [0010](docs/adr/0010-react-vite-spa-same-origin.md), [0021](docs/adr/0021-mantine-and-nonce-csp.md) |
 | Rich text | ProseMirror JSON (Tiptap editor), schema-validated on the server; never HTML | [0011](docs/adr/0011-rich-text-prosemirror-json.md) |
 | Edge | Caddy with a local CA; `https://tracker.test:8443` / `https://auth.test:8443` | [0012](docs/adr/0012-caddy-local-tls-hostnames.md), [0019](docs/adr/0019-configurable-https-port.md) |
 | Observability | JSON logs to stdout; Micrometer metrics + tracing (OTLP); optional Prometheus / Jaeger / Grafana profile | [0013](docs/adr/0013-observability.md) |
 | Testing | JUnit 5, Testcontainers (real Postgres + Keycloak), Spring Modulith boundary tests, Playwright E2E | [0014](docs/adr/0014-testing-strategy.md) |
 | Repo / CI / supply chain | GitHub + GitHub Actions; Trivy, gitleaks, Renovate | [0015](docs/adr/0015-github-actions-supply-chain.md) |
 | Memory budget | Per-service limits, JVM tuning, in-process worker | [0016](docs/adr/0016-memory-budget.md) |
-| Rate limiting | Bucket4j in the app (per user / per token) | — |
+| Rate limiting | Bucket4j in the app (per user across sessions and tokens; per IP when anonymous) | — |
+| Machine access | Personal access tokens (`trk_pat_…`, SHA-256 at rest, scoped, expiring) | [0024](docs/adr/0024-personal-access-tokens.md) |
 
 ## 4. Memory budget (< 3 GB)
 
@@ -71,7 +72,8 @@ Enforced with `mem_limit` on every Compose service. Measuring actual usage with 
 | Keycloak | 768 MB | Optimised image (`kc.sh build`), heap capped by percentage of container limit |
 | app (API + BFF + worker) | 768 MB | Heap ≈ 60% of limit; Class Data Sharing for faster start |
 | Caddy | 64 MB | |
-| **Core total** | **≈ 1.9 GB** | |
+| keycloak-config (one-shot) | 384 MB | Runs for a few seconds at start, then exits |
+| **Core total** | **≈ 1.9 GB** | (plus the one-shot briefly at start) |
 | Prometheus | 192 MB | Optional profile |
 | Jaeger (all-in-one, in-memory, capped) | 192 MB | Optional profile; traces lost on restart by design |
 | Grafana | 256 MB | Optional profile |
@@ -85,7 +87,7 @@ Fallbacks if M0 measurements exceed the budget, in order: tighten JVM heap setti
 
 Pinned in M0 (image digests in `compose.yaml` and the Dockerfiles), kept current by Renovate:
 
-Java 21 (LTS, [ADR-0017](docs/adr/0017-java-21.md)) · Spring Boot 4.1 · Spring Modulith 2.1 · springdoc 3.2 · PostgreSQL 18.6 · Keycloak 26.8 · Caddy 2.11 · Node.js 22 (build only) · React 19 · Vite 8 · TypeScript 7 · Prometheus 3.15 · Jaeger 2.22 · Grafana 13
+Java 21 (LTS, [ADR-0017](docs/adr/0017-java-21.md)) · Spring Boot 4.1 · Spring Modulith 2.1 · springdoc 3.2 · PostgreSQL 18.6 · Keycloak 26.8 · Caddy 2.11 · keycloak-config-cli 6.5 · Node.js 22 (build only) · React 19 · Mantine 9 · TanStack Query 5 · React Router 8 · Vite 8 · TypeScript 7 · Prometheus 3.15 · Jaeger 2.22 · Grafana 13
 
 ## 6. Deliberately not used
 
@@ -104,6 +106,5 @@ Java 21 (LTS, [ADR-0017](docs/adr/0017-java-21.md)) · Spring Boot 4.1 · Spring
 | Item | When | Notes |
 |---|---|---|
 | Attachment storage | P1 | S3-compatible API; self-hosted options re-evaluated then |
-| UI component library | M1 ADR | |
 | LexoRank bucket and rebalancing details | M6 ADR | |
 | Log aggregation pipeline | Later | Logs are JSON on stdout; can feed any pipeline |
